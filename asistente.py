@@ -6,22 +6,29 @@ import pyautogui
 import keyboard
 import time
 
-#Configuración de voz
-engine = pyttsx3.init()
-voices = engine.getProperty('voices')
-#Aqui se elije el tono de voz (0 = Masculino y 1 = Femenino)
-engine.setProperty('voice', voices[1].id)
-engine.setProperty('rate', 185) #Velocidad del habla
 
 def hablar(texto):
     print(f'Asistente: {texto}')
+    #Se reinicia el motor para evitar que se bloquee
+    engine = pyttsx3.init()
+    voices = engine.getProperty('voices')
+
+    #Se aplica la configuración de una voz en español
+    for voz in voices:
+        if 'spanish' in voz.name.lower() or 'mexico' in voz.name.lower() or 'spain' in voz.name.lower():
+            engine.setProperty('voice', voz.id)
+            break
+
+    engine.setProperty('rate', 185)
     engine.say(texto)
     engine.runAndWait()
+    engine.stop()
 
 def escucha():
     r = sr.Recognizer()
     with sr.Microphone() as source:
-        r.adjust_for_ambient_noise(source, duration=0.5)
+        #Reduce el ruido ambiental rapidamente
+        r.adjust_for_ambient_noise(source, duration=0.8)
         print('Escuchando...')
         try:
             audio = r.listen(source, timeout=5, phrase_time_limit=5)
@@ -29,12 +36,13 @@ def escucha():
             comando = r.recognize_google(audio, language='es-CO')
             print(f'Dijiste {comando}')
             return comando.lower()
-        except Exception:
+        except Exception as e:
+            print('No se detecto una voz o hubo un error')
             return ''
         
 def ejecutar_comando(comando):
-    if not comando:
-        return
+    if not comando or comando == '':
+        return 'continuar'
     
     #Estos son los comandos de aplicaciones
     if 'abrir youtube' in comando:
@@ -65,7 +73,7 @@ def ejecutar_comando(comando):
         hablar('Volumen silenciado')
 
     #Este es el comando para que se desconecte
-    elif 'descansa' in comando or 'adios' in comando:
+    elif 'descansa' in comando or 'adiós' in comando:
         hablar('Hasta luego, que tengas un resto de buen día')
         return 'salir'
     
@@ -77,17 +85,27 @@ def iniciar_asistencia():
     print('Instrucciones: Precionar la tecla "ALT" para hablar')
 
     while True:
-        #El asistente espera a que precione la tecla ALT
-        if keyboard.is_pressed('alt'):
-            hablar('Te estoy escuchando...')
-            pedido = escucha()
-            estado = ejecutar_comando(pedido)
+        try:
+            #El asistente espera a que precione la tecla ALT
+            if keyboard.is_pressed('alt'):
+                while keyboard.is_pressed('alt'):
+                    pass
 
-            if estado == 'salir':
-                break
+                hablar('Te escucho')
+                pedido = escucha()
 
-            print('\nEsperando activación (Preciona ALT)...')
-            time.sleep(0.5) #Esto evita activaciones multiples
+                if pedido != '':
+                    estado = ejecutar_comando(pedido)
+                    if estado == 'salir':
+                        break
+                else:
+                        hablar('No detecte nada')
+
+                print('\nListo. Preciona ALT cuendo me necesites...')
+                time.sleep(0.5)
+        except Exception as e:
+            print(f'Error en el bucle: {e}')
+            continue
 
 if __name__ == '__main__':
     iniciar_asistencia()
