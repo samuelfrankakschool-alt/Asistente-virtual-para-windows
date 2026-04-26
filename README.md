@@ -64,7 +64,7 @@ SPOTIPY_REDIRECT_URI='http://localhost:8888/callback'
 Ejecuta el asistente:
 
 ```
-python nombre_de_tu_archivo.py
+python asistente.py
 ```
 
 🎤 Mantén presionada la tecla ALT para hablar.
