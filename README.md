@@ -25,7 +25,7 @@ Asistente de voz desarrollado en Python capaz de ejecutar comandos del sistema, 
 ### 1. Clonar el repositorio
 ```
 git clone https://github.com/samuelfrankakschool-alt/Asistente-virtual-para-windows.git
-cd tu-repositorio
+cd Asistente-virtual-para-windows
 ```
 
 ### 2. Instalar dependencias
