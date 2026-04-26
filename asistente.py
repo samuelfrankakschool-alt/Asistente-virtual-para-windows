@@ -100,7 +100,7 @@ def ejecutar_comando(comando):
 
         try:
             #Se busca la canción y el artista
-            busqueda_track = sp.search(q=termino, limit=1, type='track')
+            busqueda_track = sp.search(q=termino, limit=2, type='track')
             busqueda_artist = sp.search(q=termino, limit=1, type='artist')
             track_encontrado = busqueda_track['tracks']['items'][0] if busqueda_track['tracks']['items'] else None
             artista_encontrado = busqueda_artist['artists']['items'][0] if busqueda_artist['artists']['items'] else None
