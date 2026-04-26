@@ -5,7 +5,24 @@ import webbrowser
 import pyautogui
 import keyboard
 import time
+import os
+import psutil
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth
+from dotenv import load_dotenv
 
+#Carga las credenciales
+load_dotenv()
+
+#Configuración de la API de Spotify
+scope = 'user-modify-playback-state user-read-playback-state'
+sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
+    client_id=os.getenv('SPOTIPY_CLIENT_ID'),
+    client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
+    redirect_uri=os.getenv('SPOTIPY_REDIRECT_URI'),
+    scope=scope,
+    cache_path='.cache'
+))
 
 def hablar(texto):
     print(f'Asistente: {texto}')
@@ -39,7 +56,7 @@ def escucha():
         except Exception as e:
             print('No se detecto una voz o hubo un error')
             return ''
-        
+
 def ejecutar_comando(comando):
     if not comando or comando == '':
         return 'continuar'
@@ -56,6 +73,10 @@ def ejecutar_comando(comando):
     elif 'abrir calculadora' in comando:
         hablar('Abriendo Calculadora')
         subprocess.Popen('calc.exe')
+    
+    elif 'abrir spotify' in comando:
+        hablar('Abriendo Spotify')
+        os.system('start spotify')
 
     #Estos son los comandos del sistema
     elif 'subir volumen' in comando:
@@ -71,6 +92,36 @@ def ejecutar_comando(comando):
     elif 'silencio' in comando:
         pyautogui.press('volumemute')
         hablar('Volumen silenciado')
+
+    #Logica de Spotify
+    elif 'reproduce' in comando or 'pon música de' in comando or 'pon' in comando:
+        termino = comando.replace('reproduce', '').replace('pon música de', '').replace('pon', '').strip()
+        hablar(f'Buscando {termino} en Spotify')
+
+        try:
+            resultados = sp.search(q=termino, limit=1, type='track')
+            if resultados['tracks']['items']:
+                track = resultados['tracks']['items'][0]
+                sp.start_playback(uris=[track['uri']])
+                hablar(f'Listo, suena {track['name']} de {track['artists'][0]['name']}')
+            else:
+                hablar('No encontré esa canción')
+        except Exception as e:
+            hablar()
+
+    elif 'pausa' in comando or 'detén la música' in comando or 'para la música' in comando:
+        try:
+            sp.pause_playback()
+            hablar('Música pausada')
+        except:
+            pass
+
+    elif 'siguiente' in comando or 'siguiente canción' in comando:
+        try:
+            sp.next_track()
+            hablar('Saltando a la siguiente')
+        except:
+            pass
 
     #Este es el comando para que se desconecte
     elif 'descansa' in comando or 'adiós' in comando:
