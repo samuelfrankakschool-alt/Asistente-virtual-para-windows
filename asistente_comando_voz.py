@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 #Palabra clave para activar la asistente
-WAKE_WORD = "hola jp"
+WAKE_WORD = "oye jp"
 
 #Configuración de la API de Spotify
 scope = 'user-modify-playback-state user-read-playback-state'
@@ -69,6 +69,10 @@ def ejecutar_comando(comando):
     elif 'abrir navegador' in comando:
         hablar('Abriendo Navegador')
         webbrowser.open('https://www.google.com')
+
+    elif 'abrir notas' in comando:
+        hablar('Abriendo Notas')
+        webbrowser.open('https://site2.q10.com/User/Login')
 
     elif 'abrir calculadora' in comando:
         hablar('Abriendo Calculadora')
@@ -150,6 +154,14 @@ def ejecutar_comando(comando):
     elif 'siguiente' in comando or 'siguiente canción' in comando:
         try: sp.next_track(); hablar('Siguiente canción') 
         except: pass
+
+    #Logica de busqueda
+    elif 'busca' in comando or 'busca en google' in comando:
+        termino = comando.replace('busca', '').strip()
+        hablar(f'Buscando {termino} en google')
+        busqueda = f'https://www.google.com/search?q={termino}'
+        hablar(f'Abriendo Google con información de {termino}')
+        webbrowser.open(busqueda)
 
     #Este es el comando para que se desconecte
     elif 'descansa' in comando or 'adiós' in comando:
