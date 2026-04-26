@@ -46,7 +46,7 @@ def escucha():
     with sr.Microphone() as source:
         #Reduce el ruido ambiental rapidamente
         r.adjust_for_ambient_noise(source, duration=0.8)
-        print('Escuchando...')
+        hablar('Escuchando...')
         try:
             audio = r.listen(source, timeout=5, phrase_time_limit=5)
             print('Procesando voz...')
@@ -99,32 +99,48 @@ def ejecutar_comando(comando):
         hablar(f'Buscando {termino} en Spotify')
 
         try:
-            #Busca al artista 
-            busqueda = sp.search(q=termino, limit=1, type='artist')
+            #Se busca la canción y el artista
+            busqueda_track = sp.search(q=termino, limit=1, type='track')
+            busqueda_artist = sp.search(q=termino, limit=1, type='artist')
+            track_encontrado = busqueda_track['tracks']['items'][0] if busqueda_track['tracks']['items'] else None
+            artista_encontrado = busqueda_artist['artists']['items'][0] if busqueda_artist['artists']['items'] else None
 
-            if busqueda['artists']['items']:
-                artista = busqueda['artists']['items'][0]
-                artista_uri = artista['uri']
-                nombre_artista = artista['name']
-                sp.start_playback(context_uri=artista_uri)#Esto llena la lista de siguiente con los exitos del artista
-                #Carga el modo aleatorio
-                time.sleep(1)#Una pequeña espera mientras carga la lista
+            #Si el nombre de la canción coincide mucho con lo que dijiste, prioriza la canción
+            #Comparamos si el término está contenido exactamente en el nombre del artista
+            if artista_encontrado and artista_encontrado['name'].lower() == termino.lower():
+                #Si el usuario dijo exactamente el nombre de un artista
+                artista_uri = artista_encontrado['uri']
+                nombre_artista = artista_encontrado['name']
+                sp.start_playback(context_uri=artista_uri)
+                time.sleep(1)
                 sp.shuffle(state=True)
                 hablar(f'Listo, reproduciendo éxitos de {nombre_artista} en modo aleatorio')
+
+            elif track_encontrado:
+                #Si el usuario dijo exactamente el nombre de una canción
+                #O lo que dijo conside mas con una canción
+                track_uri = track_encontrado['uri']
+                nombre_track = track_encontrado['name']
+                nombre_artista_track = track_encontrado['artists'][0]['name']
+                sp.start_playback(uris=[track_uri])
+                time.sleep(1)
+                sp.shuffle(state=True)
+                hablar(f'Listo, reproduciendo {nombre_track} de {nombre_artista_track}')
+
+            elif artista_encontrado:
+                #Si el usuario dijo el nombre de una canción 
+                #Pero coincide mas con el nombre de un artista 
+                #(Esta es un caso aislado)
+                sp.start_playback(context_uri=artista_encontrado['uri'])
+                time.sleep(1)
+                sp.shuffle(state=True)
+                hablar(f'Reproduciendo exitos de {artista_encontrado['name']}')
+
             else:
-                #Busca la canción
-                resultados = sp.search(q=termino, limit=1, type='track')
-                if resultados['tracks']['items']:
-                    track = resultados['tracks']['items'][0]
-                    sp.start_playback(uris=[track['uri']])
-                    time.sleep(1)#Una pequeña espera mientras carga la lista
-                    sp.shuffle(state=True)
-                    hablar(f'Listo, reproduciendo {track['name']} de {track['artists'][0]['name']}')
-                else: 
-                    hablar('No encontré nada relacionado con la búsqueda')
+                hablar('No encontre nada relacionado con la busqueda')
         except Exception as e:
             print(f'Error {e}')
-            hablar('Hubo un problema. Asegúrate de que Spotify esté abierto y activo')
+            hablar('Hubo un error. Asegurate que Spotify esté abierto y activo')
 
     elif 'pausa' in comando or 'detén la música' in comando or 'para la música' in comando:
         try:
