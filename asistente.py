@@ -99,15 +99,32 @@ def ejecutar_comando(comando):
         hablar(f'Buscando {termino} en Spotify')
 
         try:
-            resultados = sp.search(q=termino, limit=1, type='track')
-            if resultados['tracks']['items']:
-                track = resultados['tracks']['items'][0]
-                sp.start_playback(uris=[track['uri']])
-                hablar(f'Listo, suena {track['name']} de {track['artists'][0]['name']}')
+            #Busca al artista 
+            busqueda = sp.search(q=termino, limit=1, type='artist')
+
+            if busqueda['artists']['items']:
+                artista = busqueda['artists']['items'][0]
+                artista_uri = artista['uri']
+                nombre_artista = artista['name']
+                sp.start_playback(context_uri=artista_uri)#Esto llena la lista de siguiente con los exitos del artista
+                #Carga el modo aleatorio
+                time.sleep(1)#Una pequeña espera mientras carga la lista
+                sp.shuffle(state=True)
+                hablar(f'Listo, reproduciendo éxitos de {nombre_artista} en modo aleatorio')
             else:
-                hablar('No encontré esa canción')
+                #Busca la canción
+                resultados = sp.search(q=termino, limit=1, type='track')
+                if resultados['tracks']['items']:
+                    track = resultados['tracks']['items'][0]
+                    sp.start_playback(uris=[track['uri']])
+                    time.sleep(1)#Una pequeña espera mientras carga la lista
+                    sp.shuffle(state=True)
+                    hablar(f'Listo, reproduciendo {track['name']} de {track['artists'][0]['name']}')
+                else: 
+                    hablar('No encontré nada relacionado con la búsqueda')
         except Exception as e:
-            hablar()
+            print(f'Error {e}')
+            hablar('Hubo un problema. Asegúrate de que Spotify esté abierto y activo')
 
     elif 'pausa' in comando or 'detén la música' in comando or 'para la música' in comando:
         try:
