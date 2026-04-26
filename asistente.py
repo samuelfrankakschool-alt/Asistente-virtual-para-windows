@@ -70,6 +70,10 @@ def ejecutar_comando(comando):
         hablar('Abriendo Navegador')
         webbrowser.open('https://www.google.com')
 
+    elif 'abrir notas' in comando:
+        hablar('Abriendo Notas')
+        webbrowser.open('https://site2.q10.com/User/Login')
+
     elif 'abrir calculadora' in comando:
         hablar('Abriendo Calculadora')
         subprocess.Popen('calc.exe')
@@ -155,6 +159,14 @@ def ejecutar_comando(comando):
             hablar('Saltando a la siguiente')
         except:
             pass
+
+    #Logica de busqueda
+    elif 'busca' in comando or 'busca en google' in comando:
+        termino = comando.replace('busca', '').strip()
+        hablar(f'Buscando {termino} en google')
+        busqueda = f'https://www.google.com/search?q={termino}'
+        hablar(f'Abriendo Google con información de {termino}')
+        webbrowser.open(busqueda)
 
     #Este es el comando para que se desconecte
     elif 'descansa' in comando or 'adiós' in comando:
