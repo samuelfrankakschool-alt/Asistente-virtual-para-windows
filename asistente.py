@@ -98,6 +98,106 @@ def ejecutar_comando(comando):
         hablar('Volumen silenciado')
 
     #Logica de Spotify
+    #Lógica de canciones específicas en playlists específicas
+    elif 'de mi playlist' in comando or 'en mi playlist' in comando:
+        #Esto separa el comando para obtener canción y playlist
+        #Ejemplo: Reproduce la vaca lola de mi playlist favorita
+        try:
+           #limpia el comando de ruidos
+            comando_limpio = comando.replace(',', '').replace('.', '')
+            #Detecta que conector usaste para separar bien
+            separador = 'de mi playlist' if 'de mi playlist' in comando_limpio else 'en mi playlist'
+            partes = comando_limpio.split(separador)
+            
+            #Limpiamos palabras comunes que el usuario dice pero no son parte del nombre
+            parte_cancion = partes[0].replace('reproduce', '').replace('pon', '').replace('la canción', '').replace('el tema', '').strip()
+            parte_playlist = partes[1].strip()
+            
+            hablar(f'Buscando {parte_cancion} en tu playlist {parte_playlist}')
+
+            #Busqueda de playlist
+            playlist_id = None
+            nombre_playlist_real = ''
+            results = sp.current_user_playlists(limit=50)
+
+            while results:
+                for item in results['items']:
+                    #Buscamos si el nombre que dijiste está contenido en el nombre real
+                    if parte_playlist.lower() in item['name'].lower():
+                        playlist_id = item['id']
+                        nombre_playlist_real = item['name']
+                        break
+                if playlist_id or not results['next']: break
+                results = sp.next(results)
+
+            if playlist_id:
+                #Busqueda de la canción dentro de la playlist
+                cancion_encontrada = None
+                results_tracks = sp.playlist_items(playlist_id)
+
+                #Definimos una lista de "ruido" para limpiar la búsqueda de la canción si falla
+                palabras_ruido = ['la', 'el', 'un', 'una', 'de', 'del']
+
+                while results_tracks:
+                    for item in results_tracks['items']:
+                        #Verificamos que el item no sea nulo (por si hay anuncios o podcasts)
+                        track = item.get('track')
+                        if track and 'name' in track:
+                            nombre_track = track['name'].lower()
+                            p_cancion_low = parte_cancion.lower()
+                            
+                            #Intento 1: Match directo o contenido
+                            if p_cancion_low in nombre_track or nombre_track in p_cancion_low:
+                                cancion_encontrada = track
+                                break
+                            
+                            #Intento 2: Limpieza de artículos (por si dijiste "la bachata" y se llama "Bachata")
+                            p_limpia = " ".join([w for w in p_cancion_low.split() if w not in palabras_ruido])
+                            if p_limpia in nombre_track and len(p_limpia) > 2:
+                                cancion_encontrada = track
+                                break
+                                
+                    if cancion_encontrada or not results_tracks['next']: break
+                    results_tracks = sp.next(results_tracks)
+
+                if cancion_encontrada:
+                    sp.start_playback(uris=[cancion_encontrada['uri']])
+                    #Usamos comillas dobles externas para que las simples internas de los comentarios no rompan el string
+                    hablar(f"Poniendo {cancion_encontrada['name']} de tu playlist {nombre_playlist_real}")
+                else:
+                    hablar(f'No encontré "{parte_cancion}" dentro de tu playlist {nombre_playlist_real}')
+            else:
+                hablar(f'No encontré ninguna playlist que se llame {parte_playlist}')
+        except Exception as e:
+            print(f'Error: {e}')
+            hablar('No pude procesar la búsqueda en tu playlist')
+
+    elif 'reproduce mi playlist' in comando:
+        nombre_playlist = comando.replace('reproduce mi playlist', '').strip()
+        hablar(f'Buscando tu playlist {nombre_playlist} en spotify')
+
+        try:
+            #Esto obtiene las playlist
+            playlist = sp.current_user_playlists()
+            playlist_id = None
+
+            for item in playlist['items']:
+                if nombre_playlist.lower() in item['name'].lower():
+                    playlist_id = item['id']
+                    nombre_real = item['name']
+                    break
+
+            if playlist_id:
+                sp.start_playback(context_uri=f'spotify:playlist:{playlist_id}')
+                time.sleep(1.5)
+                sp.shuffle(state=True)
+                hablar(f'Listo. ya suena tu playlist {nombre_real} en modo aleatorio')
+            else:
+                hablar(f'No encontré ninguna playlist llamada {nombre_playlist} en tu biblioteca')
+        except Exception as e:
+            print(f'Error en Playlists: {e}')
+            hablar('No puede acceder a tus playlist')     
+
     elif 'reproduce' in comando or 'pon música de' in comando or 'pon' in comando:
         termino = comando.replace('reproduce', '').replace('pon música de', '').replace('pon', '').strip()
         hablar(f'Buscando {termino} en Spotify')
