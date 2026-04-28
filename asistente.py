@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 #Configuración de la API de Spotify
-scope = 'user-modify-playback-state user-read-playback-state'
+scope = 'user-modify-playback-state user-read-playback-state playlist-read-private'
 sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
     client_id=os.getenv('SPOTIPY_CLIENT_ID'),
     client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
