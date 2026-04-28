@@ -62,38 +62,38 @@ def ejecutar_comando(comando):
         return 'continuar'
     
     #Estos son los comandos de aplicaciones
-    if 'abrir youtube' in comando:
+    if 'abrir youtube' in comando or 'abre youtube' in comando:
         hablar('Abriendo Youtube')
         webbrowser.open('https://www.youtube.com')
 
-    elif 'abrir navegador' in comando:
+    elif 'abrir navegador' in comando or 'abre el navegador' in comando:
         hablar('Abriendo Navegador')
         webbrowser.open('https://www.google.com')
 
-    elif 'abrir notas' in comando:
+    elif 'abrir notas' in comando or 'abre mis notas' in comando:
         hablar('Abriendo Notas')
         webbrowser.open('https://site2.q10.com/User/Login')
 
-    elif 'abrir calculadora' in comando:
+    elif 'abrir calculadora' in comando or 'abre la calculadora' in comando:
         hablar('Abriendo Calculadora')
         subprocess.Popen('calc.exe')
 
-    elif 'abrir spotify' in comando:
+    elif 'abrir spotify' in comando or 'abre spotify' in comando:
         hablar('Abriendo Spotify')
         os.system('start spotify')
 
     #Estos son los comandos del sistema
-    elif 'subir volumen' in comando:
+    elif 'subir volumen' in comando or 'sube el volumen' in comando:
         hablar('Subiendo el volumen')
         for _ in range(5):
             pyautogui.press('volumeup')
 
-    elif 'bajar volumen' in comando:
+    elif 'bajar volumen' in comando or 'baja el volumen' in comando:
         hablar('Bajando el volumen')
         for _ in range(5):
             pyautogui.press('volumedown')
 
-    elif 'silencio' in comando:
+    elif 'silencio' in comando or 'silencia' in comando:
         pyautogui.press('volumemute')
         hablar('Volumen silenciado')
 
@@ -256,8 +256,15 @@ def ejecutar_comando(comando):
         except: pass
 
     #Logica de busqueda
-    elif 'busca' in comando or 'busca en google' in comando:
-        termino = comando.replace('busca', '').strip()
+    elif 'busca en youtube' in comando:
+        termino = comando.replace('busca en youtube', '').strip()
+        hablar(f'Buscando {termino} en youtube')
+        busqueda_youtube = f'https://www.youtube.com/results?search_query={termino}'
+        hablar(f'Abriendo Youtube con tu busqueda')
+        webbrowser.open(busqueda_youtube)
+
+    elif 'busca en google' in comando or 'busca' in comando:
+        termino = comando.replace('busca en google', '').replace('busca', '').strip()
         hablar(f'Buscando {termino} en google')
         busqueda = f'https://www.google.com/search?q={termino}'
         hablar(f'Abriendo Google con información de {termino}')
