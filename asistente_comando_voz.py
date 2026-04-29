@@ -10,13 +10,34 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+import threading
+from plyer import notification
+import wikipedia
 
 #Carga las credenciales
 load_dotenv()
 
+#Configurar wikipedia
+wikipedia.set_lang('es')
+
 #Palabra clave para activar la asistente
 WAKE_WORD = "oye jp"
 ULTIMA_APP = None #Aqui se guarda la memoria del asistente
+
+def temporizador_recordatorio(tarea, minutos):
+    #Esta función corre en un hilo separado para no bloquear al asistente
+    segundos = minutos * 60
+    time.sleep(segundos)
+
+    #Esto lanza la notificación visual y sonora de windows
+    notification.notify(
+        title = 'Recordatorio de JP',
+        message = f'Es hora de: {tarea}',
+        app_name = 'JP Asistente',
+        timeout = 10
+    )
+    #Hacemos que hable cuando el tiempo se acabe/cumpla
+    hablar(f'Ya llego el momento de {tarea}')
 
 #Configuración de la API de Spotify
 scope = 'user-modify-playback-state user-read-playback-state playlist-read-private'
@@ -71,17 +92,22 @@ def ejecutar_comando(comando):
             parte_tarea = comando.replace('recuerdame', '').replace('recuérdame', '')
             
             if 'en' in parte_tarea:
-                tarea, tiempo_str = parte_tarea.split('en')
+                partes = parte_tarea.split('en')
+                tarea = partes[0].strip()
+                tiempo_texto = partes[1].strip()
+
                 #Se limpia números
-                minutos = [int(s) for s in tiempo_str.split() if s.isdigit()]
+                minutos = [int(s) for s in tiempo_texto.split() if s.isdigit()]
 
                 if minutos:
-                    tiempo_espera = minutos[0]
-                    hablar(f'Vale, te recordare {tarea.strip()} en {tiempo_espera} minutos')
-                    #El sistema agenda esto automaticamente
-                    return f'crear_recordatorio: {tarea.strip()} en {tiempo_espera} minutos'
+                    m = minutos[0]
+                    hablar(f'Entiendo. Te avisare sobre {tarea} en {m} minutos')
+                    # Esto permite que el recordatorio "espere" sin trabar el programa
+                    hilo = threading.Thread(target=temporizador_recordatorio, args=(tarea, m))
+                    hilo.start()
+                    return 'continuar'
                 
-            hablar('¿En cuántos minutos quieres que te lo recuerde?')
+            hablar('No me dijiste en cuánto tiempo')
         except Exception as e:
             print(f'Error {e}')
             hablar('No pude entender el tiempo del recordatorio')
@@ -132,6 +158,25 @@ def ejecutar_comando(comando):
         os.system('start spotify')
         return 'continuar'
 
+    elif any(x in comando for x in ['define', 'qué es', 'quién es', 'busca en wikipedia']):
+        termino = comando.replace('define', '').replace('qué es', '').replace('quién es', '').replace('busca en wikipedia', '').strip()
+
+        if termino:
+            hablar(f'Buscando {termino} en Wikipedia...')
+            try:
+                #Obtiene solo las dos primeras oraciones para que no hable demasiado
+                resumen = wikipedia.summary(termino, sentences=2)
+                hablar(f'Según Wikipedia: {resumen}')
+                return 'continuar'
+            except wikipedia.exceptions.DisambiguationError as e:
+                hablar(f'Hay varias coincidencias para {termino}. Sé más específico, por ejemplo: {e.options[:3]}')
+            except wikipedia.exceptions.PageError:
+                hablar(f'No encontré información sobre {termino} en Wikipedia, ¿Quieres que lo busque en Google?')
+            except Exception as e:
+                print(f'Error Wikipendia: {e}')
+                hablar('Tuve un error para conectarme con Wikipedia')
+        return 'continuar'
+
     #Logica de busqueda con contexto
     #Definimos activadores naturales
     disparadores_busqueda = ['busca', 'buscame', 'investiga', 'averigua', 'googlea', 'qué es', 'quién es']
@@ -164,7 +209,7 @@ def ejecutar_comando(comando):
             else:
                 hablar(f'Investigando {termino} en Google')
                 webbrowser.open(f'https://www.google.com/search?q={termino}')
-                return 'continuar'
+            return 'continuar'
             
     #Estos son los comandos del sistema
     elif any(x in comando for x in ['subir volumen', 'sube el volumen']):
