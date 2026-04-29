@@ -9,12 +9,14 @@ import os
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
 #Carga las credenciales
 load_dotenv()
 
 #Palabra clave para activar la asistente
 WAKE_WORD = "oye jp"
+ULTIMA_APP = None #Aqui se guarda la memoria del asistente
 
 #Configuración de la API de Spotify
 scope = 'user-modify-playback-state user-read-playback-state playlist-read-private'
@@ -58,42 +60,124 @@ def escucha_comando_real():
             return ''
         
 def ejecutar_comando(comando):
+    global ULTIMA_APP #Se usa para recordar el contexto
     if not comando:
         return 'continuar'
     
+    #Esta es la lógica de recordatorios
+    if 'recuerdame' in comando or 'recuérdame' in comando:
+        try:
+            #Extraer la tarea y el tiempo
+            parte_tarea = comando.replace('recuerdame', '').replace('recuérdame', '')
+            
+            if 'en' in parte_tarea:
+                tarea, tiempo_str = parte_tarea.split('en')
+                #Se limpia números
+                minutos = [int(s) for s in tiempo_str.split() if s.isdigit()]
+
+                if minutos:
+                    tiempo_espera = minutos[0]
+                    hablar(f'Vale, te recordare {tarea.strip()} en {tiempo_espera} minutos')
+                    #El sistema agenda esto automaticamente
+                    return f'crear_recordatorio: {tarea.strip()} en {tiempo_espera} minutos'
+                
+            hablar('¿En cuántos minutos quieres que te lo recuerde?')
+        except Exception as e:
+            print(f'Error {e}')
+            hablar('No pude entender el tiempo del recordatorio')
+
+    #Estos son los comandos de energia
+    elif 'apagar el computador' in comando or 'apagar pc' in comando:
+        hablar('Apagando el equipo. Hasta luego')
+        os.system('shutdown /s /t 1')
+
+    elif 'reinicia el computador' in comando or 'reiniciar pc' in comando:
+        hablar('Reiniciando el equipo')
+        os.system('shutdown /r /t 1')
+
+    elif 'suspende el computador' in comando or 'suspender pc' in comando:
+        hablar('Suspendiendo el equipo')
+        os.system('rundll32.exe powrprof.dll,SetSuspendState 0,1,0')
+
     #Estos son los comandos de aplicaciones
-    if 'abrir youtube' in comando or 'abre youtube' in comando:
+    if any(x in comando for x in ['abrir youtube', 'abre youtube']):
         hablar('Abriendo Youtube')
         webbrowser.open('https://www.youtube.com')
+        ULTIMA_APP = 'youtube'
+        return 'continuar'
 
-    elif 'abrir navegador' in comando or 'abre el navegador' in comando:
+    elif any(x in comando for x in ['abrir navegador', 'abre el navegador']):
         hablar('Abriendo Navegador')
         webbrowser.open('https://www.google.com')
+        ULTIMA_APP = 'google'
+        return 'continuar'
 
-    elif 'abrir notas' in comando or 'abre mis notas' in comando:
+    elif any(x in comando for x in ['abrir notas', 'abre mis notas']):
         hablar('Abriendo Notas')
         webbrowser.open('https://site2.q10.com/User/Login')
+        return 'continuar'
 
-    elif 'abrir calculadora' in comando or 'abre la calculadora' in comando:
+    elif any(x in comando for x in ['abrir calculadora', 'abre la calculadora']):
         hablar('Abriendo Calculadora')
         subprocess.Popen('calc.exe')
+        return 'continuar'
 
-    elif 'abrir spotify' in comando or 'abre spotify' in comando:
+    elif any(x in comando for x in ['abrir administrador de tareas', 'abre el administrador de tareas']):
+        hablar('Abriendo el Administrador de Tareas')
+        subprocess.Popen('taskmgr.exe')
+        return 'continuar'
+
+    elif any(x in comando for x in ['abrir spotify', 'abre spotify']):
         hablar('Abriendo Spotify')
         os.system('start spotify')
+        return 'continuar'
 
+    #Logica de busqueda con contexto
+    #Definimos activadores naturales
+    disparadores_busqueda = ['busca', 'buscame', 'investiga', 'averigua', 'googlea', 'qué es', 'quién es']
+    #Comprueba si alguna de las frases está en el comando
+    if any(frase in comando for frase in disparadores_busqueda):
+        termino = comando
+        #Se limpia el término eliminando el disparador que se haya usado
+        for frase in disparadores_busqueda:
+            termino = termino.replace(frase, '')
+        #Limpieza de conectores innecesarios
+        termino = termino.replace('sobre', '').replace('videos de', '').strip()
+        #Decición de plataforma
+        if 'en youtube' in termino:
+            target = 'youtube'
+            termino = termino.replace('en youtube', '').strip()
+        elif 'en google' in termino:
+            target = 'google'
+            termino = termino.replace('en google', '').strip()
+        else:
+            #Si no se especifico, usamos la memoria. Si no hay memoria, Google por defecto
+            target = ULTIMA_APP if ULTIMA_APP else 'google'
+
+        if termino:
+            if target == 'youtube':
+                hablar(f'Buscando {termino} en YouTube')
+                webbrowser.open(f'https://www.youtube.com/results?search_query={termino}')
+            elif target == 'google':
+                hablar(f'Investigando {termino} en Google')
+                webbrowser.open(f'https://www.google.com/search?q={termino}')
+            else:
+                hablar(f'Investigando {termino} en Google')
+                webbrowser.open(f'https://www.google.com/search?q={termino}')
+                return 'continuar'
+            
     #Estos son los comandos del sistema
-    elif 'subir volumen' in comando or 'sube el volumen' in comando:
+    elif any(x in comando for x in ['subir volumen', 'sube el volumen']):
         hablar('Subiendo el volumen')
         for _ in range(5):
             pyautogui.press('volumeup')
 
-    elif 'bajar volumen' in comando or 'baja el volumen' in comando:
+    elif any(x in comando for x in ['bajar volumen', 'baja el volumen']):
         hablar('Bajando el volumen')
         for _ in range(5):
             pyautogui.press('volumedown')
 
-    elif 'silencio' in comando or 'silencia' in comando:
+    elif any(x in comando for x in ['silencio', 'silencia']):
         pyautogui.press('volumemute')
         hablar('Volumen silenciado')
 
@@ -198,7 +282,7 @@ def ejecutar_comando(comando):
             print(f'Error en Playlists: {e}')
             hablar('No puede acceder a tus playlist')     
 
-    elif 'reproduce' in comando or 'pon música de' in comando or 'pon' in comando:
+    elif any(x in comando for x in ['reproduce', 'pon música de', 'pon']):
         termino = comando.replace('reproduce', '').replace('pon música de', '').replace('pon', '').strip()
         hablar(f'Buscando {termino} en Spotify')
 
@@ -247,34 +331,18 @@ def ejecutar_comando(comando):
             print(f"Error detallado: {e}")
             hablar('Asegúrate de tener Spotify abierto en este dispositivo') 
 
-    elif 'pausa' in comando or 'detén la musica' in comando or 'para la musica' in comando:
+    elif any(x in comando for x in ['pausa', 'detén la musica', 'para la musica']):
         try: sp.pause_playback(); hablar('Pausando')
         except: pass
 
-    elif 'siguiente' in comando or 'siguiente canción' in comando:
+    elif any(x in comando for x in ['siguiente', 'siguiente canción']):
         try: sp.next_track(); hablar('Siguiente canción') 
         except: pass
 
-    #Logica de busqueda
-    elif 'busca en youtube' in comando:
-        termino = comando.replace('busca en youtube', '').strip()
-        hablar(f'Buscando {termino} en youtube')
-        busqueda_youtube = f'https://www.youtube.com/results?search_query={termino}'
-        hablar(f'Abriendo Youtube con tu busqueda')
-        webbrowser.open(busqueda_youtube)
-
-    elif 'busca en google' in comando or 'busca' in comando:
-        termino = comando.replace('busca en google', '').replace('busca', '').strip()
-        hablar(f'Buscando {termino} en google')
-        busqueda = f'https://www.google.com/search?q={termino}'
-        hablar(f'Abriendo Google con información de {termino}')
-        webbrowser.open(busqueda)
-
     #Este es el comando para que se desconecte
-    elif 'descansa' in comando or 'adiós' in comando:
+    elif any(x in comando for x in ['descansa', 'adiós', 'chao']):
         hablar('Hasta luego, que tengas un resto de buen día')
         return 'salir'
-    
     return 'continuar'
 
 def iniciar_asistente():
