@@ -14,26 +14,18 @@ from datetime import datetime, timedelta
 import threading
 from plyer import notification
 import wikipedia
+import pytesseract
+from PIL import ImageGrab, ImageOps
+import tkinter as tk
+import feedparser
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
 #Carga las credenciales
 load_dotenv()
 ULTIMA_APP = None #Aqui se guarda la memoria del asistente
 wikipedia.set_lang('es') #Configurar wikipedia
-
-def temporizador_recordatorio(tarea, minutos):
-    #Esta función corre en un hilo separado para no bloquear al asistente
-    segundos = minutos * 60
-    time.sleep(segundos)
-
-    #Esto lanza la notificación visual y sonora de windows
-    notification.notify(
-        title = 'Recordatorio de JP',
-        message = f'Es hora de: {tarea}',
-        app_name = 'JP Asistente',
-        timeout = 10
-    )
-    #Hacemos que hable cuando el tiempo se acabe/cumpla
-    hablar(f'Ya llego el momento de {tarea}')
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 #Configuración de la API de Spotify
 scope = 'user-modify-playback-state user-read-playback-state playlist-read-private'
@@ -77,6 +69,136 @@ def escucha():
         except Exception as e:
             print('No se detecto una voz o hubo un error')
             return ''
+
+def temporizador_recordatorio(tarea, minutos):
+    #Esta función corre en un hilo separado para no bloquear al asistente
+    segundos = minutos * 60
+    time.sleep(segundos)
+
+    #Esto lanza la notificación visual y sonora de windows
+    notification.notify(
+        title = 'Recordatorio de JP',
+        message = f'Es hora de: {tarea}',
+        app_name = 'JP Asistente',
+        timeout = 10
+    )
+    #Hacemos que hable cuando el tiempo se acabe/cumpla
+    hablar(f'Ya llego el momento de {tarea}')
+
+class AreaSelector:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.attributes('-alpha', 0.3) #Hace una ventana trasparente
+        self.root.attributes('-fullscreen', True)
+        self.root.attributes('-topmost', True)
+        self.root.config(cursor='cross')
+
+        self.canvas = tk.Canvas(self.root, cursor='cross', bg='grey')
+        self.canvas.pack(fill='both', expand=True)
+
+        self.start_x = None
+        self.start_y = None
+        self.rect = None
+        self.coords = None
+
+        self.canvas.bind('<ButtonPress-1>', self.on_button_press)
+        self.canvas.bind('<B1-Motion>', self.on_move_press)
+        self.canvas.bind('<ButtonRelease-1>', self.on_button_release)
+        self.root.bind('<Escape>', lambda e: self.root.destroy())
+
+    def on_button_press(self, event):
+        self.start_x = event.x
+        self.start_y = event.y
+        self.rect = self.canvas.create_rectangle(self.start_x, self.start_y, 1, 1, outline='red', width=2)
+
+    def on_move_press(self, event):
+        cur_x, cur_y = (event.x, event.y)
+        self.canvas.coords(self.rect, self.start_x, self.start_y, cur_x, cur_y)
+
+    def on_button_release(self, event):
+        end_x , end_y = (event.x, event.y)
+        self.coords = (min(self.start_x, end_x), min(self.start_y, end_y),
+                       max(self.start_x, end_x), max(self.start_y, end_y))
+        self.root.destroy()
+
+def leer_pantalla_seleccionada():
+    try:
+        hablar('Selecciona con el ratón el área que quieres que lea')
+
+        #Abrimos el selector
+        selector = AreaSelector()
+        selector.root.mainloop()
+
+        if selector.coords:
+            #Captura solo el área selecionada
+            captura = ImageGrab.grab(bbox=selector.coords)
+            captura = ImageOps.grayscale(captura)
+            texto_extraido = pytesseract.image_to_string(captura, lang='spa')
+
+            if texto_extraido.strip():
+                print(f'Texto detectado: {texto_extraido}')
+                hablar('Dice lo siguiente:')
+                hablar(texto_extraido)
+            else:
+                hablar('No encontré texto claro en esa selección')
+        else:
+            hablar('Selección cancelada')
+
+    except Exception as e:
+        print(f'Error OCR: {e}')
+        hablar('Tuve un problema al procesar la imagen')
+
+def obtener_noticias():
+    try:
+        hablar('Buscando las noticias más recientes del momento...')
+        #URL del RSS de Google News en español
+        url_noticias = 'https://news.google.com/rss?hl=es-419&gl=CO&ceid=CO:es-419'
+
+        feed = feedparser.parse(url_noticias)
+        #Se toma las primeras 3 noticias para no saturar
+        noticias = feed.entries[:3]
+
+        if noticias:
+            hablar('Estas son las tres noticias principales:')
+            for i, entrada in enumerate(noticias):
+                titular = entrada.title.split(' - ')[0]
+                print(f'Noticia {i+1}: {titular}')
+                hablar(f'Noticia {i+1}: {titular}')
+                time.sleep(0.5)
+            hablar('Este es el resumen por ahora')
+        else:
+            hablar('Lo siento, no puedo conectarme con el servidor de noticias')
+
+    except Exception as e:
+        print(f'Error Noticias: {e}')
+        hablar('Hubo un error al intentar leer las noticias')
+
+async def manejar_mensaje_telegram(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    #Solo respondera a tu id de usuario
+    mi_id = os.getenv('TELEGRAM_CHAT_ID')
+    if str(update.effective_user.id) != str(mi_id):
+        await update.message.reply_text('Acceso denegado. No eres mi dueño')
+        return
+    
+    texto_recibido = update.message.text.lower()
+    print(f'Mensaje de Telegram: {texto_recibido}')
+
+    resultado = ejecutar_comando(texto_recibido)
+
+    if resultado == 'salir':
+        await update.message.reply_text('Entendido, cerrando JP en la PC')
+    else: 
+        await update.message.reply_text(f'Comando "{texto_recibido}" ejecutando en tu PC')
+
+def iniciar_telegram_bot():
+    token = os.getenv('TELEGRAM_TOKEN')
+    app = ApplicationBuilder().token(token).build()
+
+    # Maneja cualquier mensaje de texto
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), manejar_mensaje_telegram))
+
+    print('>>> BOT DE TELEGRAM ACTIVO <<<')
+    app.run_polling()
 
 def ejecutar_comando(comando):
     global ULTIMA_APP #Se usa para recordar el contexto
@@ -382,6 +504,14 @@ def ejecutar_comando(comando):
         try: sp.next_track(); hablar('Siguiente canción') 
         except: pass
 
+    elif any(x in comando for x in ['lee lo seleccionado', 'qué dice aquí', 'lee esta parte']):
+        leer_pantalla_seleccionada()
+        return 'continuar'
+
+    elif any(x in comando for x in ['noticias', 'dame las noticias', 'qué pasa en el mundo']):
+        obtener_noticias()
+        return 'continuar'
+
     #Este es el comando para que se desconecte
     elif any(x in comando for x in ['descansa', 'adiós', 'chao']):
         hablar('Hasta luego, que tengas un resto de buen día')
@@ -417,4 +547,8 @@ def iniciar_asistencia():
             continue
 
 if __name__ == '__main__':
+    #Lanzamos Telegram en un hilo separado para que no bloquee el reconocimiento de voz
+    hilo_telegram = threading.Thread(target=iniciar_telegram_bot, daemon=True)
+    hilo_telegram.start()
+    
     iniciar_asistencia()
