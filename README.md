@@ -1,101 +1,120 @@
-# 🎙️ Asistente Virtual
+# 🎙️ JP: Asistente Virtual Inteligente (Modo Dios)
 
-Asistente de voz desarrollado en Python capaz de ejecutar comandos del sistema, abrir aplicaciones y controlar Spotify mediante su API oficial.
+JP no es solo un asistente... es tu copiloto digital.
+Controla tu PC, entiende tu voz, analiza código, lee tu pantalla y ejecuta tareas como si fuera Jarvis 🚀
 
 ---
 
-## 🚀 Características
+## 🚀 Características Brutales
 
-- 🎵 Control de Spotify  
-  Reproduce artistas o canciones específicas, activa modo aleatorio, pausa y cambia pistas.
-
-- 💻 Comandos del sistema  
-  Control de volumen: subir, bajar y silenciar.
-
-- 🌐 Accesos rápidos  
-  Abre YouTube, calculadora y navegador automáticamente.
-
-- 🔐 Seguridad  
-  Uso de variables de entorno (.env) para proteger credenciales.
+- 🧠 IA con Groq (Llama 3): entiende, explica y optimiza código
+- 👁️ OCR: lee texto directamente desde tu pantalla
+- 🎧 Control por voz inteligente
+- ⌨️ Modo productividad con tecla ALT
+- 🎵 Integración con Spotify (playlists, canciones, etc.)
+- 🌦️ Clima en tiempo real
+- 🧹 Limpieza y monitoreo del sistema
+- 🤖 Control remoto con Telegram
+- 📝 Recordatorios y utilidades
 
 ---
 
 ## 🛠️ Instalación
 
-### 1. Clonar el repositorio
-```
-git clone https://github.com/samuelfrankakschool-alt/Asistente-virtual-para-windows.git
-cd Asistente-virtual-para-windows
-```
+Ejecuta:
 
-### 2. Instalar dependencias
-```
-pip install -r requirements.txt
-```
+pip install spotipy groq python-dotenv pyautogui pyperclip pyttsx3 SpeechRecognition requests psutil plyer feedparser python-telegram-bot pytesseract pillow deep-translator wikipedia-api
 
-### 3. Configurar Spotify Developer
-
-1. Ir a https://developer.spotify.com/dashboard
-2. Crear una aplicación
-3. Obtener:
-   - Client ID
-   - Client Secret
-4. Agregar en Redirect URIs:
-```
-http://127.0.0.1:8888/callback
-```
+⚠️ IMPORTANTE:
+Debes tener instalado Tesseract OCR en tu sistema.
 
 ---
 
-## 🔑 Variables de Entorno
+## 🔑 Configuración (.env)
 
-Crea un archivo `.env` en la raíz:
+Crea un archivo .env con esto:
 
-```
-SPOTIPY_CLIENT_ID='tu_id_aqui'
-SPOTIPY_CLIENT_SECRET='tu_secret_aqui'
-SPOTIPY_REDIRECT_URI='http://localhost:8888/callback'
-```
+# Spotify
+SPOTIPY_CLIENT_ID=tu_id
+SPOTIPY_CLIENT_SECRET=tu_secret
+SPOTIPY_REDIRECT_URI=http://127.0.0.1:8888/callback
+
+# IA
+GROQ_API_KEY=tu_api_key
+
+# Telegram
+TELEGRAM_TOKEN=tu_token
+TELEGRAM_CHAT_ID=tu_id
+
+# Clima
+OPENWEATHER_API_KEY=tu_api
 
 ---
 
-## ▶️ Uso
+## ▶️ Modos de Uso
 
-Ejecuta el asistente:
+Tienes dos formas de invocar a JP:
 
-```
+### 1. Modo Manos Libres
+Ejecuta:
+python asistente_comando_voz.py
+
+- Siempre escuchando
+- Activa con: "Oye JP"
+- Ideal cuando no usas teclado
+
+---
+
+### 2. Modo Productividad
+Ejecuta:
 python asistente.py
-```
 
-🎤 Mantén presionada la tecla ALT para hablar.
-
----
-
-## 🧠 Ejemplos de Comandos
-
-- "Reproduce música de Bad Bunny"
-- "Pausa la música"
-- "Siguiente canción"
-- "Sube el volumen"
-- "Abre YouTube"
-- "Abre el navegador"
+- Solo escucha al presionar ALT
+- Perfecto para programar
 
 ---
 
-## ⚖️ Requisitos
+## 🧠 Comandos Estrella
 
-- Python 3.x
-- Cuenta de Spotify Premium
+Programación:
+- "Explica este código"
+- "Optimiza esto"
+
+Visión:
+- "Lee lo seleccionado"
+- "Qué dice aquí"
+
+Sistema:
+- "Limpia archivos temporales"
+- "Estado del sistema"
+
+Spotify:
+- "Reproduce mi playlist gym"
+- "Pon música de Bad Bunny"
+
+Utilidades:
+- "Traduce hola a inglés"
+- "Recuérdame estudiar en 10 minutos"
+
+Información:
+- "Cómo está el clima"
+- "Dame noticias"
 
 ---
 
-## 📌 Notas
+## 📌 Requisitos
 
-- Asegúrate de tener Spotify abierto en tu dispositivo
-- La API de Spotify requiere autenticación inicial en el navegador
+- Python 3.12+
+- Spotify Premium
+- Internet
 
 ---
 
-## 📄 Licencia
+## ⚡ Filosofía
 
-Este proyecto es de uso personal y educativo.
+JP convierte tu computador en una estación inteligente.
+Menos clicks, más control.
+
+---
+
+Desarrollado por Joan 🔥
